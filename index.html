@@ -544,9 +544,24 @@ const CFG = {
   TWITTER:     'https://x.com/time_memecoin',
   DEXSCREENER: 'https://dexscreener.com/ethereum/0x000',
   BUY:         'https://app.uniswap.org/',
+  UMAMI_ID:    '8607455a-4282-4ae4-a4ae-9f031f5254a8',
   // Add your meme image file names or URLs, e.g. ['meme1.jpg','meme2.png']
   MEMES: ['/img/1.jpg','/img/2.jpg','/img/3.jpg','/img/4.jpg','/img/5.jpg','/img/6.jpg','/img/7.jpg','/img/8.jpg'],
 };
+
+/* ── Umami: inject script ── */
+if (CFG.UMAMI_ID && CFG.UMAMI_ID !== 'YOUR-UMAMI-WEBSITE-ID') {
+  const _us = document.createElement('script');
+  _us.defer = true;
+  _us.src   = 'https://cloud.umami.is/script.js';
+  _us.setAttribute('data-website-id', CFG.UMAMI_ID);
+  document.head.appendChild(_us);
+}
+
+/* safe track helper */
+function track(event, data) {
+  try { umami.track(event, data || undefined); } catch(e) {}
+}
 
 /* apply config */
 const caShort = CFG.CA.length > 12 ? CFG.CA.slice(0,6) + '...' + CFG.CA.slice(-4) : CFG.CA;
@@ -564,6 +579,7 @@ function copyCA() {
     const t = document.getElementById('toast');
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2200);
+    track('ca_copy');
   });
 }
 
@@ -662,6 +678,7 @@ function onWheel(e) {
 function doTransition() {
   transitioning = true;
   zoomBar.style.width = '100%';
+  track('portal_entered');
 
   flashEl.style.transition  = 'opacity 0.12s';
   flashEl.style.opacity     = '1';
@@ -701,6 +718,7 @@ window.addEventListener('touchmove', function(e) {
 var frame2El = document.getElementById('frame2');
 var frame3El = document.getElementById('frame3');
 var frame4El = document.getElementById('frame4');
+var _seenSections = new Set();
 
 mainScroll.addEventListener('scroll', function() {
   var st  = mainScroll.scrollTop;
@@ -712,8 +730,12 @@ mainScroll.addEventListener('scroll', function() {
     d.classList.toggle('on', i === fi);
   });
 
-  [frame2El, frame3El, frame4El].forEach(function(fr) {
-    if (fr.getBoundingClientRect().top < window.innerHeight * 0.82) animFU(fr);
+  var sectionNames = ['about_viewed', 'memes_viewed', 'socials_viewed'];
+  [frame2El, frame3El, frame4El].forEach(function(fr, i) {
+    if (fr.getBoundingClientRect().top < window.innerHeight * 0.82) {
+      animFU(fr);
+      if (!_seenSections.has(i)) { _seenSections.add(i); track(sectionNames[i]); }
+    }
   });
 });
 
@@ -726,6 +748,35 @@ function animFU(container) {
 function goFrame(idx) {
   mainScroll.scrollTo({ top: idx * window.innerHeight, behavior: 'smooth' });
 }
+
+/* ── Button click tracking ── */
+[
+  { id: 'h-buy',    event: 'buy_click',         data: { location: 'header' } },
+  { id: 'buy-link', event: 'buy_click',         data: { location: 'page' } },
+  { id: 'h-tg',     event: 'telegram_click',    data: { location: 'header' } },
+  { id: 's-tg',     event: 'telegram_click',    data: { location: 'page' } },
+  { id: 'h-x',      event: 'twitter_click',     data: { location: 'header' } },
+  { id: 's-x',      event: 'twitter_click',     data: { location: 'page' } },
+  { id: 'h-dex',    event: 'dexscreener_click', data: { location: 'header' } },
+  { id: 's-dex',    event: 'dexscreener_click', data: { location: 'page' } },
+].forEach(function(item) {
+  var el = document.getElementById(item.id);
+  if (el) el.addEventListener('click', function() { track(item.event, item.data); });
+});
+
+/* ── Time on site milestones ── */
+var _timeStart = Date.now();
+[30, 60, 120, 300].forEach(function(sec) {
+  setTimeout(function() {
+    track('time_on_site', { seconds: sec });
+  }, sec * 1000);
+});
+
+/* ── Exit intent: track time spent on leave ── */
+window.addEventListener('beforeunload', function() {
+  var spent = Math.round((Date.now() - _timeStart) / 1000);
+  track('session_end', { seconds_spent: spent });
+});
 </script>
 </body>
 </html>
