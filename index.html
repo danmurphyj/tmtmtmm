@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TIME MACHINE | $TIME</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --purple: #7b00ff;
+      --purple-light: #b56aff;
+      --cyan: #00e5ff;
+      --gold: #ffc400;
+      --dark: #050508;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--dark);
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* ── TICKER ── */
+    #ticker {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 52px; z-index: 9999;
+      background: linear-gradient(90deg,rgba(5,5,8,.96) 0%,rgba(18,0,36,.96) 50%,rgba(5,5,8,.96) 100%);
+      border-bottom: 1px solid rgba(123,0,255,.55);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; gap: 16px;
+      backdrop-filter: blur(14px);
+    }
+    .ticker-left { display: flex; align-items: center; gap: 12px; }
+    .ticker-name {
+      font-size: 16px; font-weight: 900; letter-spacing: 3px;
+      color: var(--gold);
+      text-shadow: 0 0 12px rgba(255,196,0,.7);
+    }
+    .ticker-div { width: 1px; height: 20px; background: rgba(123,0,255,.4); }
+    .ca-pill {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      padding: 6px 12px; border: 1px solid rgba(0,229,255,.3);
+      border-radius: 6px; transition: all .2s;
+      background: rgba(0,229,255,.04);
+      user-select: none;
+    }
+    .ca-pill:hover { border-color: var(--cyan); background: rgba(0,229,255,.1); box-shadow: 0 0 14px rgba(0,229,255,.2); }
+    .ca-label { font-size: 10px; color: rgba(0,229,255,.7); letter-spacing: 2px; font-family:'Share Tech Mono',monospace; }
+    .ca-addr  { font-size: 11px; color: var(--cyan); letter-spacing: 1px; font-family:'Share Tech Mono',monospace; }
+    .copy-ic  { width:14px; height:14px; opacity:.55; transition: opacity .2s; }
+    .ca-pill:hover .copy-ic { opacity: 1; }
+
+    .hdr-socials { display: flex; align-items: center; gap: 12px; }
+    .hdr-soc {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid rgba(123,0,255,.4);
+      transition: all .2s; text-decoration: none; color: rgba(255,255,255,.7);
+    }
+    .hdr-soc:hover {
+      border-color: var(--purple-light); background: rgba(123,0,255,.2);
+      color: white; box-shadow: 0 0 14px rgba(123,0,255,.45);
+      transform: translateY(-1px);
+    }
+    .hdr-soc svg { width: 16px; height: 16px; }
+
+    .hdr-buy {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 18px; border-radius: 50px;
+      background: linear-gradient(135deg,var(--purple) 0%,#cc00ff 100%);
+      border: none; font-family:'Orbitron',sans-serif;
+      font-size: 11px; font-weight: 900; letter-spacing: 3px;
+      color: white; text-decoration: none; cursor: pointer;
+      transition: all .2s;
+      box-shadow: 0 0 18px rgba(123,0,255,.5);
+    }
+    .hdr-buy:hover { transform: translateY(-1px) scale(1.04); box-shadow: 0 0 28px rgba(123,0,255,.8); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 40px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: rgba(0,229,255,.12); border: 1px solid var(--cyan);
+      color: var(--cyan); padding: 10px 26px; border-radius: 8px;
+      font-size: 11px; letter-spacing: 3px; z-index: 99999;
+      opacity: 0; transition: all .3s; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── FLASH ── */
+    #flash {
+      position: fixed; inset: 0; background: #fff;
+      z-index: 8888; opacity: 0; pointer-events: none;
+    }
+
+    /* ── FRAME 1 ── */
+    #frame1 {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100; overflow: hidden;
+    }
+    .f1-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, #1a0033 0%, #050508 68%);
+    }
+    #stars { position: absolute; inset: 0; overflow: hidden; z-index: 6; pointer-events: none; }
+    .star {
+      position: absolute; border-radius: 50%;
+      background: white;
+      animation: twinkle linear infinite alternate;
+    }
+    @keyframes twinkle { from{opacity:.1} to{opacity:.9} }
+
+    .f1-title {
+      position: relative; z-index: 10;
+      text-align: center;
+      pointer-events: none; transition: opacity .3s;
+    }
+    .f1-title h1 {
+      font-size: clamp(34px,6vw,80px); font-weight: 900; letter-spacing: 8px;
+      color: var(--gold);
+      text-shadow: 0 0 24px rgba(255,196,0,.8), 0 0 70px rgba(255,196,0,.25);
+      line-height: 1;
+    }
+    .f1-title .sub {
+      font-size: clamp(11px,1.8vw,14px); letter-spacing: 6px;
+      color: rgba(255,255,255,.45); margin-top: 10px;
+    }
+
+    /* VIDEO full-screen portal */
+    #portal-wrap {
+      position: absolute; inset: 0; z-index: 5;
+      transform-origin: center center;
+      will-change: transform;
+      overflow: hidden;
+    }
+    #portal-video {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+
+    .scroll-hint {
+      position: absolute; bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10; display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      animation: bob 2s ease-in-out infinite;
+      transition: opacity .3s;
+    }
+    .scroll-hint span { font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,.35); }
+    .s-arrow { width:18px; height:18px; border-right:2px solid rgba(255,255,255,.35); border-bottom:2px solid rgba(255,255,255,.35); transform:rotate(45deg); }
+    @keyframes bob { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(8px)} }
+
+    /* ── ZOOM PROGRESS BAR (frame1) ── */
+    #zoom-bar {
+      position: fixed; bottom: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg,var(--purple),var(--cyan));
+      z-index: 9999; width: 0%; transition: width .05s;
+    }
+
+    /* ── MAIN SCROLL (frames 2-4) ── */
+    #main-scroll {
+      display: none; position: fixed; inset: 0;
+      overflow-y: scroll; scroll-snap-type: y mandatory;
+      z-index: 50;
+    }
+    .frame {
+      height: 100vh; width: 100%;
+      scroll-snap-align: start;
+      position: relative; overflow: hidden;
+    }
+
+    /* nav dots */
+    #ndots {
+      display: none; position: fixed; right: 22px; top: 50%;
+      transform: translateY(-50%); z-index: 9998;
+      flex-direction: column; gap: 10px;
+    }
+    .ndot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,.28); cursor: pointer;
+      transition: all .3s; border: 1px solid rgba(255,255,255,.18);
+    }
+    .ndot.on { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); transform: scale(1.4); }
+
+    /* ── FRAME 2 ABOUT ── */
+    #frame2 {
+      background:
+        linear-gradient(rgba(5,5,8,.72),rgba(5,5,8,.72)),
+        url('bg-about.jpg') center/cover no-repeat,
+        radial-gradient(ellipse at 20% 50%,rgba(123,0,255,.14) 0%,transparent 60%),
+        linear-gradient(180deg,#0d0020 0%,#050508 100%);
+    }
+    .f-inner {
+      position: relative; z-index: 10;
+      height: 100%; overflow-y: auto;
+      display: flex; align-items: center; justify-content: center;
+      padding: 72px 40px 40px; /* 72 = 52px ticker + 20px gap */
+    }
+    .about-box { max-width: 780px; text-align: center; }
+    .sec-tag { font-size: 11px; letter-spacing: 6px; color: var(--cyan); margin-bottom: 14px; opacity: .75; }
+    .sec-h {
+      font-size: clamp(30px,5vw,58px); font-weight: 900;
+      letter-spacing: 4px; margin-bottom: 22px; line-height: 1.1;
+    }
+    .hl { color: var(--gold); text-shadow: 0 0 18px rgba(255,196,0,.5); }
+    .about-txt {
+      font-family:'Share Tech Mono',monospace;
+      font-size: clamp(13px,1.4vw,15px); line-height: 2;
+      color: rgba(255,255,255,.72); margin-bottom: 36px;
+    }
+    .stats { display: flex; justify-content: center; gap: 44px; flex-wrap: wrap; }
+    .stat-v { font-size: clamp(22px,3vw,36px); font-weight: 900; color: var(--gold); text-shadow:0 0 14px rgba(255,196,0,.5); }
+    .stat-l { font-size: 10px; letter-spacing: 3px; color: rgba(255,255,255,.45); margin-top: 4px; }
+
+    /* ── FRAME 3 MEMES ── */
+    #frame3 {
+      background:
+        linear-gradient(rgba(5,5,8,.76),rgba(5,5,8,.76)),
+        url('bg-memes.jpg') center/cover no-repeat,
+        radial-gradient(ellipse at 50% 30%,rgba(0,229,255,.07) 0%,transparent 60%),
+        linear-gradient(180deg,#00101a 0%,#050508 100%);
+    }
+    .memes-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px; width: 100%; max-width: 1200px;
+      align-content: start;
+    }
+    .meme-card {
+      aspect-ratio: 1; border-radius: 14px; overflow: hidden;
+      border: 1px solid rgba(0,229,255,.18);
+      background: rgba(0,229,255,.04);
+      transition: all .28s; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .meme-card:hover {
+      border-color: var(--cyan); box-shadow: 0 0 28px rgba(0,229,255,.3);
+      transform: translateY(-5px) scale(1.03);
+    }
+    .meme-card:hover .meme-zoom { opacity: 1; }
+    .meme-card img { width:100%; height:100%; object-fit:cover; display:block; }
+    .meme-zoom {
+      position:absolute; inset:0; background:rgba(0,0,0,.42);
+      display:flex; align-items:center; justify-content:center;
+      opacity:0; transition:opacity .22s;
+    }
+    .meme-zoom svg { width:36px; height:36px; color:white; }
+    .meme-ph { color:rgba(255,255,255,.2); font-size:11px; letter-spacing:2px; font-family:'Share Tech Mono',monospace; text-align:center; line-height:1.8; }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.93); z-index: 999999;
+      align-items: center; justify-content: center;
+      cursor: zoom-out; backdrop-filter: blur(6px);
+    }
+    #lightbox.open { display: flex; }
+    #lb-img {
+      max-width: 90vw; max-height: 88vh;
+      border-radius: 12px; object-fit: contain;
+      box-shadow: 0 0 80px rgba(0,0,0,.9), 0 0 40px rgba(0,229,255,.15);
+      cursor: default; border: 1px solid rgba(0,229,255,.25);
+    }
+    #lb-close {
+      position: absolute; top: 20px; right: 24px;
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: white; transition: all .2s; z-index: 2;
+    }
+    #lb-close:hover { background: rgba(255,255,255,.22); transform: scale(1.1); }
+    #lb-nav {
+      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 14px; align-items: center;
+    }
+    .lb-arr {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: white; font-size: 18px; transition: all .2s;
+      user-select: none;
+    }
+    .lb-arr:hover { background: rgba(0,229,255,.2); border-color: var(--cyan); }
+
+    /* ── FRAME 4 SOCIALS/BUY ── */
+    #frame4 { background: #050508; }
+    #f4-video-wrap {
+      position: absolute; inset: 0; z-index: 0; overflow: hidden;
+    }
+    #f4-video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    #f4-overlay {
+      position: absolute; inset: 0; z-index: 1;
+      background:
+        linear-gradient(rgba(5,5,8,.58),rgba(5,5,8,.58)),
+        radial-gradient(ellipse at 50% 50%,rgba(123,0,255,.22) 0%,transparent 65%);
+    }
+    .f4-inner {
+      position: relative; z-index: 10;
+      height: 100%; overflow-y: auto;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 32px; padding: 72px 40px 40px;
+    }
+    .f4-title { font-size: clamp(26px,4vw,50px); font-weight:900; letter-spacing:5px; text-align:center; }
+
+    .buy-btn {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 18px 52px;
+      background: linear-gradient(135deg,var(--purple) 0%,#cc00ff 100%);
+      border: none; border-radius: 50px;
+      font-family:'Orbitron',sans-serif; font-size:17px; font-weight:900;
+      letter-spacing: 4px; color: white; cursor: pointer;
+      transition: all .3s; text-decoration: none;
+      box-shadow: 0 0 32px rgba(123,0,255,.55), 0 4px 22px rgba(0,0,0,.5);
+    }
+    .buy-btn:hover { transform:translateY(-3px) scale(1.05); box-shadow:0 0 55px rgba(123,0,255,.85),0 8px 32px rgba(0,0,0,.5); }
+
+    .ca-block { text-align:center; }
+    .ca-lbl { font-size:10px; letter-spacing:5px; color:rgba(255,255,255,.38); margin-bottom:10px; }
+    .ca-full {
+      font-family:'Share Tech Mono',monospace;
+      font-size: clamp(10px,1.6vw,15px);
+      color: var(--cyan); letter-spacing:1.5px; cursor:pointer;
+      padding: 14px 28px; border:1px solid rgba(0,229,255,.28); border-radius:8px;
+      transition: all .3s; word-break:break-all; max-width:620px;
+      user-select: all;
+    }
+    .ca-full:hover { border-color:var(--cyan); background:rgba(0,229,255,.07); box-shadow:0 0 20px rgba(0,229,255,.2); }
+
+    .soc-big { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
+    .soc-big-a {
+      display:flex; align-items:center; gap:10px;
+      padding:13px 26px; border:1px solid rgba(123,0,255,.4); border-radius:50px;
+      text-decoration:none; color:white; font-size:12px; letter-spacing:3px;
+      transition:all .3s; background:rgba(123,0,255,.07);
+    }
+    .soc-big-a:hover { border-color:var(--purple-light); background:rgba(123,0,255,.2); box-shadow:0 0 20px rgba(123,0,255,.4); transform:translateY(-2px); }
+    .soc-big-a svg { width:18px; height:18px; flex-shrink:0; }
+
+    /* ── FADE-UP ANIM ── */
+    .fu { opacity:0; transform:translateY(28px); transition:opacity .65s ease,transform .65s ease; }
+    .fu.vis { opacity:1; transform:translateY(0); }
+
+    /* ── SCROLL PROGRESS ── */
+    #sprog {
+      position:fixed; bottom:0; left:0; height:3px; display:none;
+      background:linear-gradient(90deg,var(--purple),var(--cyan));
+      z-index:9999; width:0%; transition:width .08s;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 600px) {
+      .ticker-name { font-size: 13px; letter-spacing: 2px; }
+      .ca-addr { display: none; }
+      .hdr-soc { width: 28px; height: 28px; }
+      .hdr-buy { padding: 6px 12px; font-size: 9px; letter-spacing: 2px; }
+      .buy-btn { padding: 15px 32px; font-size: 14px; letter-spacing: 2px; }
+      .f-inner  { padding: 68px 16px 24px; }
+      .f4-inner { padding: 68px 16px 24px; }
+      .memes-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════ TICKER ════════════ -->
+<header id="ticker">
+  <div class="ticker-left">
+    <span class="ticker-name">$TIME</span>
+    <div class="ticker-div"></div>
+    <div class="ca-pill" onclick="copyCA()">
+      <span class="ca-label">CA</span>
+      <span class="ca-addr" id="ca-short">loading…</span>
+      <svg class="copy-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+    </div>
+  </div>
+  <nav class="hdr-socials">
+    <a class="hdr-buy" id="h-buy" href="#" target="_blank">BUY $TIME</a>
+    <a class="hdr-soc" id="h-tg" href="https://t.me/time_memecoin" target="_blank" title="Telegram">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+      </svg>
+    </a>
+    <a class="hdr-soc" id="h-x" href="https://x.com/time_memecoin" target="_blank" title="X / Twitter">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>
+    </a>
+    <a class="hdr-soc" id="h-dex" href="#" target="_blank" title="Dexscreener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+      </svg>
+    </a>
+  </nav>
+</header>
+
+<div id="flash"></div>
+<div id="toast">ADDRESS COPIED ✓</div>
+<div id="zoom-bar"></div>
+<div id="sprog"></div>
+
+<!-- ════════════ FRAME 1: PORTAL ════════════ -->
+<div id="frame1">
+  <div class="f1-bg"></div>
+  <div id="stars"></div>
+
+  <div class="f1-title" id="f1title">
+    <h1>TIME MACHINE</h1>
+    <div class="sub">THE PORTAL IS OPEN</div>
+  </div>
+
+  <div id="portal-wrap">
+    <video id="portal-video" autoplay loop muted playsinline src="portal.mp4"></video>
+  </div>
+
+  <div class="scroll-hint" id="scrollhint">
+    <span>SCROLL TO ENTER</span>
+    <div class="s-arrow"></div>
+  </div>
+</div>
+
+<!-- ════════════ FRAMES 2-4 ════════════ -->
+<div id="main-scroll">
+
+  <!-- FRAME 2: ABOUT -->
+  <section class="frame" id="frame2">
+    <div class="f-inner">
+      <div class="about-box">
+        <p class="sec-tag fu">// ABOUT THE PROJECT</p>
+        <h2 class="sec-h fu">TRAVEL THROUGH<br><span class="hl">TIME</span></h2>
+        <p class="about-txt fu">
+          The universe's first memecoin powered by temporal mechanics.<br>
+          While others chase trends, $TIME transcends them.<br>
+          No roadmap needed when you can see the future.<br>
+          The portal is open — will you step through?
+        </p>
+        <div class="stats fu">
+          <div><div class="stat-v">&#8734;</div><div class="stat-l">SUPPLY</div></div>
+          <div><div class="stat-v">0%</div><div class="stat-l">TAX</div></div>
+          <div><div class="stat-v">&#128293;</div><div class="stat-l">LP BURNED</div></div>
+          <div><div class="stat-v">100%</div><div class="stat-l">COMMUNITY</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRAME 3: MEMES -->
+  <section class="frame" id="frame3">
+    <div class="f-inner">
+      <div style="width:100%;max-width:1200px;">
+        <p class="sec-tag fu" style="text-align:center">// MEME VAULT</p>
+        <h2 class="sec-h fu" style="text-align:center;margin-bottom:28px">
+          <span class="hl">MEMES</span> FROM THE FUTURE
+        </h2>
+        <div class="memes-grid fu" id="memes-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRAME 4: SOCIALS / BUY / CA -->
+  <section class="frame" id="frame4">
+    <div id="f4-video-wrap">
+      <video id="f4-video" autoplay loop muted playsinline src="bg-socials.mp4"></video>
+    </div>
+    <div id="f4-overlay"></div>
+    <div class="f4-inner">
+      <h2 class="f4-title fu">JOIN THE <span class="hl">TIME</span></h2>
+
+      <a class="buy-btn fu" id="buy-link" href="#" target="_blank">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+        </svg>
+        BUY $TIME
+      </a>
+
+      <div class="ca-block fu">
+        <p class="ca-lbl">CONTRACT ADDRESS</p>
+        <div class="ca-full" id="ca-big" onclick="copyCA()">loading…</div>
+      </div>
+
+      <div class="soc-big fu">
+        <a class="soc-big-a" id="s-tg" href="https://t.me/time_memecoin" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+          </svg>
+          TELEGRAM
+        </a>
+        <a class="soc-big-a" id="s-x" href="https://x.com/time_memecoin" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          X / TWITTER
+        </a>
+        <a class="soc-big-a" id="s-dex" href="#" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+          </svg>
+          DEXSCREENER
+        </a>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /main-scroll -->
+
+<!-- ════════════ LIGHTBOX ════════════ -->
+<div id="lightbox" onclick="closeLB()">
+  <div id="lb-close" onclick="closeLB()">✕</div>
+  <img id="lb-img" src="" alt="" onclick="event.stopPropagation()">
+  <div id="lb-nav" onclick="event.stopPropagation()">
+    <div class="lb-arr" onclick="lbStep(-1)">&#8592;</div>
+    <div class="lb-arr" onclick="lbStep(1)">&#8594;</div>
+  </div>
+</div>
+
+<div id="ndots">
+  <div class="ndot on" onclick="goFrame(0)"></div>
+  <div class="ndot"    onclick="goFrame(1)"></div>
+  <div class="ndot"    onclick="goFrame(2)"></div>
+</div>
+
+<script>
+/* ══════════════════════════════
+   CONFIG — edit your values here
+══════════════════════════════ */
+const CFG = {
+  CA:          '0x0000000000000000000000000000000000000000',
+  TELEGRAM:    'https://t.me/time_memecoin',
+  TWITTER:     'https://x.com/time_memecoin',
+  DEXSCREENER: 'https://dexscreener.com/ethereum/0x000',
+  BUY:         'https://app.uniswap.org/',
+  // Add your meme image file names or URLs, e.g. ['meme1.jpg','meme2.png']
+  MEMES: ['/img/1.jpg','/img/2.jpg','/img/3.jpg','/img/4.jpg','/img/5.jpg','/img/6.jpg','/img/7.jpg','/img/8.jpg'],
+};
+
+/* apply config */
+const caShort = CFG.CA.length > 12 ? CFG.CA.slice(0,6) + '...' + CFG.CA.slice(-4) : CFG.CA;
+document.getElementById('ca-short').textContent = caShort;
+document.getElementById('ca-big').textContent   = CFG.CA;
+['h-tg','s-tg'].forEach(id  => document.getElementById(id).href = CFG.TELEGRAM);
+['h-x', 's-x'].forEach(id   => document.getElementById(id).href = CFG.TWITTER);
+['h-dex','s-dex'].forEach(id => document.getElementById(id).href = CFG.DEXSCREENER);
+document.getElementById('buy-link').href = CFG.BUY;
+document.getElementById('h-buy').href     = CFG.BUY;
+
+/* copy CA */
+function copyCA() {
+  navigator.clipboard.writeText(CFG.CA).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  });
+}
+
+/* stars */
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 160; i++) {
+  const s  = document.createElement('div');
+  const sz = Math.random() * 2.2 + 0.8;
+  s.className  = 'star';
+  s.style.left = Math.random() * 100 + '%';
+  s.style.top  = Math.random() * 100 + '%';
+  s.style.width = s.style.height = sz + 'px';
+  s.style.opacity = (Math.random() * .7 + .1).toFixed(2);
+  s.style.animationDelay    = (Math.random() * 4).toFixed(2) + 's';
+  s.style.animationDuration = (2 + Math.random() * 3).toFixed(2) + 's';
+  starsEl.appendChild(s);
+}
+
+/* meme grid + lightbox */
+const grid = document.getElementById('memes-grid');
+const lbSrcs = CFG.MEMES.filter(Boolean);
+let lbIdx = 0;
+
+CFG.MEMES.forEach((src, i) => {
+  const card = document.createElement('div');
+  card.className = 'meme-card';
+  if (src) {
+    const imgSrcIdx = lbSrcs.indexOf(src);
+    card.innerHTML =
+      `<img src="${src}" alt="meme ${i+1}" loading="lazy">` +
+      `<div class="meme-zoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>`;
+    card.onclick = () => openLB(imgSrcIdx);
+  } else {
+    card.innerHTML = `<div class="meme-ph">MEME ${i+1}<br>add path in<br>CFG.MEMES</div>`;
+  }
+  grid.appendChild(card);
+});
+
+function openLB(idx) {
+  if (!lbSrcs.length) return;
+  lbIdx = idx;
+  document.getElementById('lb-img').src = lbSrcs[lbIdx];
+  document.getElementById('lightbox').classList.add('open');
+  document.getElementById('lb-nav').style.display = lbSrcs.length > 1 ? 'flex' : 'none';
+}
+function closeLB() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+function lbStep(dir) {
+  lbIdx = (lbIdx + dir + lbSrcs.length) % lbSrcs.length;
+  document.getElementById('lb-img').src = lbSrcs[lbIdx];
+}
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') closeLB();
+  if (e.key === 'ArrowLeft')  lbStep(-1);
+  if (e.key === 'ArrowRight') lbStep(1);
+});
+
+/* ══════════════════════════════
+   FRAME 1 scroll → zoom → flash
+══════════════════════════════ */
+const portalWrap = document.getElementById('portal-wrap');
+const frame1El   = document.getElementById('frame1');
+const mainScroll = document.getElementById('main-scroll');
+const ndots      = document.getElementById('ndots');
+const flashEl    = document.getElementById('flash');
+const zoomBar    = document.getElementById('zoom-bar');
+const f1title    = document.getElementById('f1title');
+const scrollHint = document.getElementById('scrollhint');
+const sprogEl    = document.getElementById('sprog');
+
+let f1Active      = true;
+let scrollAccum   = 0;
+const THRESHOLD   = 900;
+let transitioning = false;
+
+function onWheel(e) {
+  if (!f1Active || transitioning) return;
+  e.preventDefault();
+
+  scrollAccum = Math.max(0, scrollAccum + e.deltaY * 0.85);
+  const p     = Math.min(scrollAccum / THRESHOLD, 1);
+  const scale = 1 + p * 32;
+
+  portalWrap.style.transform = 'scale(' + scale + ')';
+  zoomBar.style.width        = (p * 100) + '%';
+
+  const fade = Math.max(0, 1 - p * 1.6);
+  f1title.style.opacity    = fade;
+  scrollHint.style.opacity = fade;
+
+  if (p >= 1) doTransition();
+}
+
+function doTransition() {
+  transitioning = true;
+  zoomBar.style.width = '100%';
+
+  flashEl.style.transition  = 'opacity 0.12s';
+  flashEl.style.opacity     = '1';
+  flashEl.style.pointerEvents = 'all';
+
+  setTimeout(function() {
+    frame1El.style.display   = 'none';
+    mainScroll.style.display = 'block';
+    ndots.style.display      = 'flex';
+    sprogEl.style.display    = 'block';
+    zoomBar.style.display    = 'none';
+    f1Active = false;
+
+    flashEl.style.transition = 'opacity 0.45s';
+    flashEl.style.opacity    = '0';
+    setTimeout(function() { flashEl.style.pointerEvents = 'none'; }, 500);
+
+    setTimeout(function() { animFU(document.getElementById('frame2')); }, 350);
+  }, 180);
+}
+
+window.addEventListener('wheel', onWheel, { passive: false });
+
+/* touch */
+var touchY = 0;
+window.addEventListener('touchstart', function(e) { touchY = e.touches[0].clientY; }, { passive: true });
+window.addEventListener('touchmove', function(e) {
+  if (!f1Active || transitioning) return;
+  var dy = touchY - e.touches[0].clientY;
+  touchY = e.touches[0].clientY;
+  onWheel({ deltaY: dy * 2.5, preventDefault: function() { e.preventDefault(); } });
+}, { passive: false });
+
+/* ══════════════════════════════
+   Scroll progress + nav + fade-ups
+══════════════════════════════ */
+var frame2El = document.getElementById('frame2');
+var frame3El = document.getElementById('frame3');
+var frame4El = document.getElementById('frame4');
+
+mainScroll.addEventListener('scroll', function() {
+  var st  = mainScroll.scrollTop;
+  var tot = mainScroll.scrollHeight - mainScroll.clientHeight;
+  sprogEl.style.width = (tot > 0 ? (st / tot) * 100 : 0) + '%';
+
+  var fi = Math.round(st / window.innerHeight);
+  document.querySelectorAll('.ndot').forEach(function(d, i) {
+    d.classList.toggle('on', i === fi);
+  });
+
+  [frame2El, frame3El, frame4El].forEach(function(fr) {
+    if (fr.getBoundingClientRect().top < window.innerHeight * 0.82) animFU(fr);
+  });
+});
+
+function animFU(container) {
+  container.querySelectorAll('.fu:not(.vis)').forEach(function(el, i) {
+    setTimeout(function() { el.classList.add('vis'); }, i * 110);
+  });
+}
+
+function goFrame(idx) {
+  mainScroll.scrollTo({ top: idx * window.innerHeight, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
